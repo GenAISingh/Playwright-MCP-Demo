@@ -1,4 +1,4 @@
-# Playwright MCP Server
+# Playwright MCP Server With FastMCP and Test on Postman 
 
 A Model Context Protocol (MCP) server that enables browser automation using Playwright, built with FastMCP.
 
