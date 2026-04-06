@@ -1,0 +1,5 @@
+fastmcp
+playwright>=1.40.0
+uvicorn[standard]
+pydantic
+python-multipart
