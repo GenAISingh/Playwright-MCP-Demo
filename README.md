@@ -98,6 +98,37 @@ curl -X POST http://localhost:8000/navigate \
   -d '{"url": "https://example.com"}'
 ```
 
+## Test With Postman
+
+You can also test MCP functionality using Postman and the running `http://localhost:8000/mcp` endpoint.
+
+1. Open Postman.
+2. Create a new MCP request or a new HTTP POST request if your version does not expose MCP request types.
+3. Set the request URL to:
+
+   ```text
+   http://localhost:8000/mcp
+   ```
+
+4. Set the request body to raw JSON and use the following payload for a navigation test:
+
+   ```json
+   {
+     "method": "tools/call",
+     "params": {
+       "name": "browser_navigate",
+       "arguments": {
+         "url": "https://example.com"
+       }
+     }
+   }
+   ```
+
+5. Click **Send** or **Run**.
+6. Review the response panel to confirm the tool execution and any returned status.
+
+Screenshots demonstrating the Postman MCP request setup and response flow can be added to the `screenshots/` folder.
+
 ## Deployment to Azure
 
 ### Prerequisites
