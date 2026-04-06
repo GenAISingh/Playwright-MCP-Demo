@@ -1,6 +1,12 @@
 # Playwright MCP Server
 
-A Model Context Protocol (MCP) server for browser automation using Playwright and FastMCP. FastMCP provides lightweight async MCP tool hosting with streamable HTTP transport, making it easy to expose Playwright browser automation as a reusable MCP toolset. This server provides a set of tools for controlling a browser, perfect for automated testing, AI-driven workflows, and browser-based data extraction.
+A Model Context Protocol (MCP) server that enables browser automation using Playwright, built with FastMCP.
+
+FastMCP is a lightweight framework that hosts MCP tools using asynchronous execution and streamable HTTP transport. This makes it easy to expose browser automation capabilities as reusable MCP tools.
+
+With this server, you can control a browser programmatically through MCP tools. These tools allow you to perform actions such as navigating web pages, interacting with elements, extracting data, and running automated workflows.
+
+I am using FastMCP in this code because it makes it very easy to expose Python functions as MCP tools over HTTP without manually building the MCP protocol, server routing, or async infrastructure.
 
 ## Features
 
