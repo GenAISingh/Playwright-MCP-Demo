@@ -16,13 +16,25 @@ A Model Context Protocol (MCP) server for browser automation using Playwright. T
 |------|-------------|-------|
 | `health_check()` | Returns server health status | None |
 | `browser_navigate()` | Navigate to a URL | `url: str` |
+| `browser_navigate_back()` | Go back in browser history | None |
 | `browser_click()` | Click an element | `ref: str` (CSS selector) |
+| `browser_drag()` | Drag and drop between elements | `startRef`, `endRef` |
+| `browser_hover()` | Hover over an element | `ref: str` |
 | `browser_type()` | Type text into an element | `ref: str`, `text: str` |
-| `browser_take_screenshot()` | Take a screenshot | `filename: str` (default: "screenshot.png"), `fullPage: bool` (default: true) |
-| `browser_evaluate()` | Execute JavaScript in page context | `function: str` (JS code to evaluate) |
-| `browser_resize()` | Set viewport size | `width: int`, `height: int` |
-| `browser_press_key()` | Press a keyboard key | `key: str` (e.g., "Enter", "Tab", "Escape") |
-| `browser_snapshot()` | Get current page HTML/DOM | None |
+| `browser_fill_form()` | Fill multiple form fields | `fields: list` |
+| `browser_file_upload()` | Upload files to a file input | `files: list` |
+| `browser_press_key()` | Press a keyboard key | `key: str` |
+| `browser_resize()` | Resize the browser window | `width: int`, `height: int` |
+| `browser_console_messages()` | Retrieve page console messages | `level: str` |
+| `browser_handle_dialog()` | Handle alerts/prompts/confirmations | `accept: bool` |
+| `browser_evaluate()` | Execute JavaScript in page context | `function: str` |
+| `browser_snapshot()` | Capture page DOM/accessibility snapshot | `url: str` (optional) |
+| `browser_network_requests()` | Get network requests made by the page | `static: bool`, `requestBody: bool`, `requestHeaders: bool` |
+| `browser_run_code()` | Execute custom Playwright code | `code: str`, `filename: str` |
+| `browser_select_option()` | Select option(s) from a dropdown | `ref: str`, `values: list` |
+| `browser_tabs()` | Manage browser tabs | `action: str` |
+| `browser_wait_for()` | Wait for text, element, or timeout | Depends on parameters |
+| `browser_take_screenshot()` | Take a screenshot | `filename: str`, `fullPage: bool` |
 | `browser_close()` | Close the browser | None |
 
 ## Prerequisites
