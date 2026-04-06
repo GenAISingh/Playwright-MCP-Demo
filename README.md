@@ -1,6 +1,6 @@
 # Playwright MCP Server
 
-A Model Context Protocol (MCP) server for browser automation using Playwright. This server provides a set of tools for controlling a headless Chromium browser, perfect for automated testing, web scraping, and browser-based workflows.
+A Model Context Protocol (MCP) server for browser automation using Playwright and FastMCP. FastMCP provides lightweight async MCP tool hosting with streamable HTTP transport, making it easy to expose Playwright browser automation as a reusable MCP toolset. This server provides a set of tools for controlling a browser, perfect for automated testing, AI-driven workflows, and browser-based data extraction.
 
 ## Features
 
@@ -127,7 +127,6 @@ You can also test MCP functionality using Postman and the running `http://localh
 5. Click **Send** or **Run**.
 6. Review the response panel to confirm the tool execution and any returned status.
 
-Screenshots demonstrating the Postman MCP request setup and response flow can be added to the `screenshots/` folder.
 
 ## Deployment to Azure
 
