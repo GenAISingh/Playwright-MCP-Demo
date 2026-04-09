@@ -45,9 +45,10 @@ async def start_browser():
         logger.info("Initializing Playwright browser...")
         try:
             playwright = await async_playwright().start()
+            headless = os.getenv("HEADLESS", "true").lower() != "false"
             browser = await playwright.chromium.launch(
-                headless=False,
-                args=["--disable-blink-features=AutomationControlled"]
+                headless=headless,
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"]
             )
             context = await browser.new_context()
             page = await context.new_page()

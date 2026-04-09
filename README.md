@@ -1,20 +1,85 @@
 # Playwright MCP Server With FastMCP and Test on Postman 
 
-A Model Context Protocol (MCP) server that enables browser automation using Playwright, built with FastMCP.
+> A production-ready [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that exposes full browser automation over HTTP — built with [FastMCP](https://github.com/pydantic/fastmcp) and [Playwright](https://playwright.dev/python/), deployable to Azure App Service.
 
-FastMCP is a lightweight framework that hosts MCP tools using asynchronous execution and streamable HTTP transport. This makes it easy to expose browser automation capabilities as reusable MCP tools.
+![Python](https://img.shields.io/badge/Python-3.8%2B-blue)
+![FastMCP](https://img.shields.io/badge/FastMCP-stateless--http-green)
+![Playwright](https://img.shields.io/badge/Playwright-Chromium-orange)
+![Azure](https://img.shields.io/badge/Deploy-Azure%20App%20Service-0078D4)
 
-With this server, you can control a browser programmatically through MCP tools. These tools allow you to perform actions such as navigating web pages, interacting with elements, extracting data, and running automated workflows.
+Control a real Chromium browser through simple HTTP calls. No Selenium, no WebDriver setup, no manual MCP protocol boilerplate. Define browser actions as Python functions — FastMCP handles the routing, async execution, and HTTP transport automatically.
 
-I am using FastMCP in this code because it makes it very easy to expose Python functions as MCP tools over HTTP without manually building the MCP protocol, server routing, or async infrastructure.
+## When to Use This
+
+| Use Case | Example |
+|----------|---------|
+| **AI agent browser control** | Let an LLM agent navigate, click, and scrape web pages via MCP tool calls |
+| **End-to-end test automation** | Drive a real Chromium browser over HTTP from any language or test runner |
+| **Web scraping pipelines** | Extract DOM snapshots, evaluate JS, and capture screenshots programmatically |
+| **RPA (Robotic Process Automation)** | Automate repetitive web workflows — form filling, file uploads, multi-tab flows |
+| **Automated screenshots / visual monitoring** | Capture full-page screenshots of any URL on demand |
+| **Remote browser execution** | Run browser automation on a server or in Azure without a local display |
+
+### When NOT to Use This
+
+- You only need static HTML parsing — use `requests` + `BeautifulSoup` instead
+- You need parallel browsers at scale — consider Playwright's own grid or Playwright Test
+- You need a full GUI test framework with assertions and reports — use Playwright Test or Pytest-Playwright directly
+
+## Architecture
+
+### Project Files
+
+| File | Purpose |
+|------|---------|
+| `server.py` | Main MCP server — registers all browser tools and starts FastMCP |
+| `validate_server.py` | Pre-flight checker — verifies all imports and runtime dependencies |
+| `requirements.txt` | Python dependency list |
+
+### How It Works
+
+- `server.py` creates a `FastMCP` server using `stateless_http=True` and `transport="streamable-http"`
+- Browser automation tools are plain Python async functions decorated with `@mcp.tool()`
+- Playwright is **lazily initialized** — the Chromium browser only starts on the first tool call
+- A single browser instance (`playwright`, `browser`, `context`, `page`) is reused across all requests
+- A `health_check` tool acts as a lightweight Azure App Service health probe — it responds instantly without starting the browser
+- The server binds to `0.0.0.0` and reads the `PORT` environment variable (default `8000`)
+
+## Architecture Diagram
+
+```mermaid
+flowchart LR
+    Client[Client / MCP Caller]
+    subgraph Server[Playwright MCP Server]
+      direction TB
+      FastMCP[FastMCP]
+      Browser[Playwright Browser Instance]
+      Tools[Browser Tools / MCP Endpoints]
+    end
+    Client -->|HTTP / MCP Request| FastMCP
+    FastMCP -->|calls tool| Tools
+    Tools -->|lazy init| Browser
+    Browser -->|returns result| Tools
+    Tools -->|HTTP response| Client
+```
+
+> **Step-by-step:**
+> 1. Client sends an HTTP POST to `http://localhost:8000/mcp`
+> 2. `FastMCP` receives and dispatches the request to the matching browser tool
+> 3. The tool lazily starts Playwright + Chromium if not already running
+> 4. Playwright executes the browser action (navigate, click, screenshot, etc.)
+> 5. The result is returned as JSON over HTTP
 
 ## Features
 
-- **Lazy-loaded browser** - Browser initializes on first tool call, not at startup
-- **Full browser automation** - Navigate, click, type, take screenshots, evaluate JavaScript, and more
-- **Azure App Service ready** - Health check endpoint for Azure Service Health Probes
-- **Async/await support** - Efficient asynchronous operations with FastMCP
-- **Streamable HTTP transport** - Enables real-time communication with clients
+| | |
+|---|---|
+| **Lazy-loaded browser** | Chromium starts on first tool call — zero startup overhead |
+| **Full browser automation** | Navigate, click, type, screenshot, evaluate JS, DOM snapshot, and more |
+| **Azure App Service ready** | Built-in `health_check` tool satisfies Azure health probes instantly |
+| **Async / await** | Every tool is a native Python async function — no blocking calls |
+| **Streamable HTTP transport** | FastMCP uses streamable-http for real-time MCP communication |
+| **Postman testable** | Any HTTP client can call the `/mcp` endpoint directly |
 
 ## Tools Available
 
@@ -94,14 +159,25 @@ export PORT=3000
 python server.py
 ```
 
-## Usage Example
+## Quick Usage Example
 
-Once the server is running, you can call the MCP tools via HTTP:
+With the server running, call any tool via the `/mcp` endpoint:
 
 ```bash
-curl -X POST http://localhost:8000/navigate \
+curl -X POST http://localhost:8000/mcp \
   -H "Content-Type: application/json" \
-  -d '{"url": "https://example.com"}'
+  -d '{
+    "method": "tools/call",
+    "params": {
+      "name": "browser_navigate",
+      "arguments": { "url": "https://example.com" }
+    }
+  }'
+```
+
+Expected response:
+```json
+{ "status": "navigated", "url": "https://example.com" }
 ```
 
 ## Test With Postman
@@ -141,23 +217,24 @@ You can also test MCP functionality using Postman and the running `http://localh
 - An Azure subscription
 - Docker (optional, for containerization)
 
-### Using Azure App Service
+> **Recommended: Use Docker deployment below.** Plain App Service Python runtime does not include Chromium system dependencies and will fail to launch the browser.
 
-1. **Create an App Service**
+### Using Azure App Service (Docker-based)
+
+1. **Create an App Service with a custom container**
    ```bash
-   az appservice plan create --name <plan-name> --resource-group <rg-name> --sku B1 --is-linux
-   az webapp create --resource-group <rg-name> --plan <plan-name> --name <app-name> --runtime "PYTHON:3.11"
+   az appservice plan create --name <plan-name> --resource-group <rg-name> --sku B2 --is-linux
+   az webapp create --resource-group <rg-name> --plan <plan-name> --name <app-name> --deployment-container-image-name <your-acr>.azurecr.io/playwright-mcp-server:latest
    ```
 
-2. **Deploy the app**
+2. **Configure environment**
    ```bash
-   az webapp up --resource-group <rg-name> --name <app-name> --runtime "PYTHON:3.11"
+   az webapp config appsettings set --resource-group <rg-name> --name <app-name> \
+     --settings PORT=8000 HEADLESS=true
    ```
 
-3. **Configure environment**
-   ```bash
-   az webapp config appsettings set --resource-group <rg-name> --name <app-name> --settings PORT=8000
-   ```
+3. **Configure the health probe** (Azure Portal → App Service → Health Check)
+   - Set path to `/mcp`
 
 ### Docker Deployment (Recommended)
 
@@ -167,20 +244,17 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for Playwright
-RUN apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libnss3 \
-    libgconf-2-4 \
-    libfontconfig1 \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt && playwright install chromium
+
+# Install Python dependencies and Playwright with all Chromium system dependencies
+RUN pip install --no-cache-dir -r requirements.txt \
+    && playwright install --with-deps chromium
 
 COPY . .
 
 EXPOSE 8000
+
+ENV HEADLESS=true
 
 CMD ["python", "server.py"]
 ```
@@ -193,19 +267,50 @@ docker run -p 8000:8000 playwright-mcp-server
 
 ## Environment Variables
 
-- `PORT` - Port to run the server on (default: 8000)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `PORT` | `8000` | Port the server listens on |
+| `HEADLESS` | `true` | Set to `false` to show the browser window (local dev only) |
 
 ## Testing
 
-Run the test suite:
+### Validate Dependencies
+
+```bash
+python validate_server.py
+```
+
+### Run the Test Suite
+
 ```bash
 python test_fastmcp_simple.py
 ```
 
-Validate dependencies:
-```bash
-python validate_server.py
-```
+### Test with MCP Inspector (Recommended)
+
+[MCP Inspector](https://github.com/modelcontextprotocol/inspector) is the official interactive tool for exploring and testing MCP servers. It gives you a visual UI to browse all registered tools, call them with custom inputs, and inspect responses — no Postman or curl needed.
+
+**Prerequisites:** Node.js installed
+
+1. Start the server:
+   ```bash
+   python server.py
+   ```
+
+2. In a new terminal, launch MCP Inspector:
+   ```bash
+   npx @modelcontextprotocol/inspector
+   ```
+
+3. Open the Inspector UI (it will print a local URL, typically `http://localhost:5173`)
+
+4. Connect to your running server:
+   - Transport: **SSE** or **Streamable HTTP**
+   - URL: `http://localhost:8000/mcp`
+
+5. You will see all registered tools (`browser_navigate`, `browser_click`, `browser_take_screenshot`, etc.) listed in the left panel. Click any tool, fill in the inputs, and hit **Run Tool** to test it live.
+
+> MCP Inspector is the fastest way to verify your server is working correctly before deploying to Azure.
 
 ## Project Structure
 
@@ -219,14 +324,6 @@ python validate_server.py
 └── .venv/                 # Virtual environment (auto-generated)
 ```
 
-## Notes
-
-- The browser instance is lazy-loaded on the first tool call and reused for subsequent calls
-- Browser tabs/contexts are maintained during the server lifetime
-- The server includes a health check endpoint (`/health_check`) for Azure App Service monitoring
-- Screenshots are saved to the working directory or specified path
-- JavaScript evaluation runs in the context of the current page
-
 ## Troubleshooting
 
 **Browser won't initialize:**
@@ -239,13 +336,18 @@ python validate_server.py
 **Timeout errors:**
 - Increase browser timeout or check network connectivity to target URLs
 
-## License
+**Screenshots not saving:**
+- Ensure the path specified in `filename` is writable by the server process
+- Defaults to the current working directory
 
-[Your License Here]
+**JavaScript evaluation fails:**
+- The function must be a valid JS expression returning a serializable value
+- Example: `"() => document.title"` not `"document.title"`
 
-## Support
+## References
 
-For issues or questions, please refer to:
-- [Playwright Documentation](https://playwright.dev/python/)
-- [FastMCP Documentation](https://github.com/pydantic/fastmcp)
-- [MCP Protocol Documentation](https://modelcontextprotocol.io/)
+- [Playwright Python Docs](https://playwright.dev/python/)
+- [FastMCP GitHub](https://github.com/pydantic/fastmcp)
+- [MCP Protocol Spec](https://modelcontextprotocol.io/)
+- [Azure App Service Deployment](https://learn.microsoft.com/en-us/azure/app-service/)
+
